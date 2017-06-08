@@ -1,16 +1,24 @@
 package server
 
 import (
-    "github.com/gorilla/mux"
+	"net/http"
 
-    "github.com/blankbook/shared/web"
+	"github.com/gorilla/mux"
+
+	"github.com/blankbook/shared/web"
 )
 
-const PATH_PREFIX = "/content/write"
+const pathPrefix = "/content/write"
 
+// SetupRoutes configures the service API endpoints
 func SetupRoutes() {
-    muxRouter := mux.NewRouter()
-    r := web.NewHttpRouter(muxRouter, PATH_PREFIX)
-    SetupAPI(r)
-    r.StartListening();
+	muxRouter := mux.NewRouter()
+	muxRouter.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	r := web.NewHTTPRouter(muxRouter, pathPrefix)
+	SetupAPI(r)
+	r.StartListening()
+}
+
+func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "endpoint not found", http.StatusNotFound)
 }
