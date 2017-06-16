@@ -1,7 +1,6 @@
 package server
 
 import (
-    "log"
     "net/http"
     "database/sql"
 
@@ -15,37 +14,28 @@ func SetupAPI(r web.Router, db *sql.DB) {
 }
 
 func PostPost(w http.ResponseWriter, queryParams map[string][]string, body string, db *sql.DB) {
-    post, err := models.ParsePost(body)
-    if err != nil {
-            http.Error(w, err.Error(), http.StatusBadRequest)
-            return
-    }
-    err = post.Validate()
-    if err != nil {
-            http.Error(w, err.Error(), http.StatusBadRequest)
-            return
-    }
-    err = db.Ping()
-    if err != nil {
-        log.Fatalf(err.Error())
-    }
-    rows, err := db.Query("SELECT Title FROM posts")
-    if err != nil {
-        log.Fatalf(err.Error())
-    }
-    var s string
-    defer rows.Close()
-    for rows.Next() {
-        err := rows.Scan(&s)
+    var err error
+    defer func() {
         if err != nil {
-            log.Fatal(err)
+            http.Error(w, err.Error(), http.StatusBadRequest)
         }
-        log.Println(s)
-    }
-    err = rows.Err()
+    }()
+    p, err := models.ParsePost(body)
     if err != nil {
-        log.Fatal(err)
+        return
     }
-    // send post to database
+    err = p.Validate()
+    if err != nil {
+        return
+    }
+    query :=`
+    INSERT INTO Posts 
+    (Title, Content, ContentType, GroupName, Time, Color)
+    Values ($1, $2, $3, $4, $5, $6)`
+
+    _, err = db.Exec(query, p.Title, p.Content, p.ContentType, p.GroupName, p.Time, p.Color)
+    if err != nil {
+        return
+    }
     w.WriteHeader(http.StatusOK)
 }
