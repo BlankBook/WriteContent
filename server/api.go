@@ -17,6 +17,9 @@ func SetupAPI(r web.Router, db *sql.DB) {
     r.HandleRoute([]string{web.PUT}, "/post/vote",
                   []string{"userId", "postId", "vote"}, []string{},
                   PutPostVote, db)
+    r.HandleRoute([]string{web.POST}, "/post/comment",
+                  []string{}, []string{},
+                  PostPostComment, db)
     r.HandleRoute([]string{web.PUT}, "/post/comment/vote",
                   []string{"userId", "postId", "commentId", "vote"}, []string{},
                   PutPostCommentVote, db)
@@ -82,6 +85,34 @@ func PutPostVote(w http.ResponseWriter, q map[string]string, b string, db *sql.D
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return;
+    }
+    w.WriteHeader(http.StatusOK)
+}
+
+func PostPostComment(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+    var err error
+    defer func() {
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusBadRequest)
+        }
+    }()
+    c, err := models.ParseComment(b)
+    if err != nil {
+        return
+    }
+    err = c.Validate()
+    if err != nil {
+        return
+    }
+    query :=`
+        INSERT INTO Comments
+        (Score, ParentPost, ParentComment, Content, EditContent, Time, Color)
+        Values ($1, $2, $3, $4, $5, $6, $7)`
+
+    _, err = db.Exec(query, c.Score, c.ParentPost, c.ParentComment, c.Content,
+                     c.EditContent, c.Time, c.Color)
+    if err != nil {
+        return
     }
     w.WriteHeader(http.StatusOK)
 }
