@@ -16,7 +16,10 @@ func SetupAPI(r web.Router, db *sql.DB) {
                   PostPost, db)
     r.HandleRoute([]string{web.PUT}, "/post/vote",
                   []string{"userId", "postId", "vote"}, []string{},
-                  PutVote, db)
+                  PutPostVote, db)
+    r.HandleRoute([]string{web.PUT}, "/post/comment/vote",
+                  []string{"userId", "postId", "commentId", "vote"}, []string{},
+                  PutPostCommentVote, db)
 }
 
 func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
@@ -46,7 +49,7 @@ func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) 
     w.WriteHeader(http.StatusOK)
 }
 
-func PutVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+func PutPostVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
     userId := q["userId"]
     postId := q["postId"]
     vote, err := strconv.Atoi(q["vote"])
@@ -76,6 +79,44 @@ func PutVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
         COMMIT TRANSACTION;`
 
     _, err = db.Query(query, userId, postId, vote)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return;
+    }
+    w.WriteHeader(http.StatusOK)
+}
+
+func PutPostCommentVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+    userId := q["userId"]
+    postId := q["postId"]
+    commentId := q["commentId"]
+    vote, err := strconv.Atoi(q["vote"])
+    if vote > 1 || vote < -1 || err != nil {
+        http.Error(w, "Vote must be from -1 to 1", http.StatusBadRequest)
+        return
+    }
+    query := `
+        DECLARE @Values TABLE (Value INT);
+        SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+        BEGIN TRANSACTION;
+        UPDATE TOP (1) dbo.commentVotes SET Value=$4
+        OUTPUT DELETED.Value INTO @Values
+        WHERE VoterID=$1 AND PostID=$2 AND CommentID=$3;
+        IF @@ROWCOUNT = 0
+            BEGIN
+            INSERT dbo.commentVotes (VoterID, PostID, CommentID, Value) SELECT $1, $2, $3, $4;
+            UPDATE TOP (1) dbo.comments SET Score=Score+$4 WHERE ID=$3
+            END
+        ELSE
+            BEGIN
+            DECLARE @Value INT 
+            SELECT TOP 1 @Value=Value
+            FROM @Values
+            UPDATE TOP (1) dbo.comments SET Score=Score+$4-@Value WHERE ID=$3
+            END
+        COMMIT TRANSACTION;`
+
+    _, err = db.Query(query, userId, postId, commentId, vote)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return;
