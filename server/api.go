@@ -1,6 +1,7 @@
 package server
 
 import (
+    "time"
     "strconv"
     "net/http"
     "database/sql"
@@ -14,6 +15,7 @@ func SetupAPI(r web.Router, db *sql.DB) {
     r.HandleRoute([]string{web.POST}, "/post",
                   []string{}, []string{},
                   PostPost, db)
+    // NEXT: Add 'PUT /post' to modify post content
     r.HandleRoute([]string{web.PUT}, "/post/vote",
                   []string{"userId", "postId", "vote"}, []string{},
                   PutPostVote, db)
@@ -36,6 +38,10 @@ func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) 
     if err != nil {
         return
     }
+    if p.Time == 0 {
+        p.Time = time.Now().Unix()
+    }
+    p.Rank = -1
     err = p.Validate()
     if err != nil {
         return
