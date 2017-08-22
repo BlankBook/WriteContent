@@ -25,6 +25,9 @@ func SetupAPI(r web.Router, db *sql.DB) {
     r.HandleRoute([]string{web.PUT}, "/post/comment/vote",
                   []string{"userId", "postId", "commentId", "vote"}, []string{},
                   PutPostCommentVote, db)
+    r.HandleRoute([]string{web.GET}, "/health",
+                  []string{}, []string{},
+                  GetHealth, db) 
 }
 
 func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
@@ -158,5 +161,9 @@ func PutPostCommentVote(w http.ResponseWriter, q map[string]string, b string, db
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return;
     }
+    w.WriteHeader(http.StatusOK)
+}
+
+func GetHealth(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
     w.WriteHeader(http.StatusOK)
 }
