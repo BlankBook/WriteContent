@@ -17,20 +17,20 @@ func SetupAPI(r web.Router, db *sql.DB) {
                   PostPost, db)
     // NEXT: Add 'PUT /post' to modify post content
     r.HandleRoute([]string{web.PUT}, "/post/vote",
-                  []string{"userId", "postId", "vote"}, []string{},
+                  []string{"userid", "postid", "vote"}, []string{},
                   PutPostVote, db)
     r.HandleRoute([]string{web.POST}, "/post/comment",
                   []string{}, []string{},
                   PostPostComment, db)
     r.HandleRoute([]string{web.PUT}, "/post/comment/vote",
-                  []string{"userId", "postId", "commentId", "vote"}, []string{},
+                  []string{"userid", "postid", "commentid", "vote"}, []string{},
                   PutPostCommentVote, db)
     r.HandleRoute([]string{web.GET}, "/health",
                   []string{}, []string{},
                   GetHealth, db) 
 }
 
-func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+func PostPost(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
     var err error
     defer func() {
         if err != nil {
@@ -61,10 +61,10 @@ func PostPost(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) 
     w.WriteHeader(http.StatusOK)
 }
 
-func PutPostVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
-    userId := q["userId"]
-    postId := q["postId"]
-    vote, err := strconv.Atoi(q["vote"])
+func PutPostVote(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
+    userId := q["userid"][0]
+    postId := q["postid"][0]
+    vote, err := strconv.Atoi(q["vote"][0])
     if vote > 1 || vote < -1 || err != nil {
         http.Error(w, "Vote must be from -1 to 1", http.StatusBadRequest)
         return
@@ -98,7 +98,7 @@ func PutPostVote(w http.ResponseWriter, q map[string]string, b string, db *sql.D
     w.WriteHeader(http.StatusOK)
 }
 
-func PostPostComment(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+func PostPostComment(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
     var err error
     defer func() {
         if err != nil {
@@ -126,11 +126,11 @@ func PostPostComment(w http.ResponseWriter, q map[string]string, b string, db *s
     w.WriteHeader(http.StatusOK)
 }
 
-func PutPostCommentVote(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
-    userId := q["userId"]
-    postId := q["postId"]
-    commentId := q["commentId"]
-    vote, err := strconv.Atoi(q["vote"])
+func PutPostCommentVote(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
+    userId := q["userid"][0]
+    postId := q["postid"][0]
+    commentId := q["commentid"][0]
+    vote, err := strconv.Atoi(q["vote"][0])
     if vote > 1 || vote < -1 || err != nil {
         http.Error(w, "Vote must be from -1 to 1", http.StatusBadRequest)
         return
@@ -164,6 +164,6 @@ func PutPostCommentVote(w http.ResponseWriter, q map[string]string, b string, db
     w.WriteHeader(http.StatusOK)
 }
 
-func GetHealth(w http.ResponseWriter, q map[string]string, b string, db *sql.DB) {
+func GetHealth(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
     w.WriteHeader(http.StatusOK)
 }
