@@ -5,6 +5,7 @@ import (
     "strconv"
     "net/http"
     "database/sql"
+    "encoding/json"
 
     "github.com/blankbook/shared/models"
     "github.com/blankbook/shared/web"
@@ -52,13 +53,19 @@ func PostPost(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB
     query :=`
         INSERT INTO Posts 
         (Title, Content, ContentType, GroupName, Time, Color)
+        OUTPUT Inserted.ID
         Values ($1, $2, $3, $4, $5, $6)`
 
-    _, err = db.Exec(query, p.Title, p.Content, p.ContentType, p.GroupName, p.Time, p.Color)
-    if err != nil {
-        return
-    }
-    w.WriteHeader(http.StatusOK)
+    rows, err := db.Query(query, p.Title, p.Content, p.ContentType, p.GroupName, p.Time, p.Color)
+    defer rows.Close()
+    rows.Next()
+    var idWrapper struct { ID int }
+    err = rows.Scan(&idWrapper.ID)
+    if err != nil { return }
+    res, err := json.Marshal(idWrapper)
+    if err != nil { return }
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(res)
 }
 
 func PutPostVote(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
@@ -116,14 +123,20 @@ func PostPostComment(w http.ResponseWriter, q map[string][]string, b string, db 
     query :=`
         INSERT INTO Comments
         (Score, ParentPost, ParentComment, Content, EditContent, Time, Color)
+        OUTPUT Inserted.ID
         Values ($1, $2, $3, $4, $5, $6, $7)`
 
-    _, err = db.Exec(query, c.Score, c.ParentPost, c.ParentComment, c.Content,
+    rows, err := db.Query(query, c.Score, c.ParentPost, c.ParentComment, c.Content,
                      c.EditContent, c.Time, c.Color)
-    if err != nil {
-        return
-    }
-    w.WriteHeader(http.StatusOK)
+    defer rows.Close()
+    rows.Next()
+    var idWrapper struct { ID int }
+    err = rows.Scan(&idWrapper.ID)
+    if err != nil { return }
+    res, err := json.Marshal(idWrapper)
+    if err != nil { return }
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(res)
 }
 
 func PutPostCommentVote(w http.ResponseWriter, q map[string][]string, b string, db *sql.DB) {
